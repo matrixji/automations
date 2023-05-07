@@ -1,0 +1,38 @@
+name: 'Sync from upstream'
+
+on:
+  schedule:
+    # scheduled at 06:00 for GMT+8
+    - cron:  '0 22 * * *'
+  workflow_dispatch:  # click the button on Github repo!
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    name: Sync latest commits from upstream repo
+    strategy:
+      fail-fast: false
+      matrix:
+        syncup:
+          - from: milvus-io/milvus:master
+            to: matrixji/milvus:master
+          - from: milvus-io/milvus:1.1
+            to: matrixji/milvus:1.1
+          - from: milvus-io/milvus:2.2.0
+            to: matrixji/milvus:2.2.0
+          - from: milvus-io/milvus:2.3.0
+            to: matrixji/milvus:2.3.0
+    steps:
+    - name: Sync upstream changes
+      run: |
+        mkdir repo
+        cd repo
+        git init
+        export from_repo="$(echo ${{ matrix.syncup.from }} | cut -d':' -f1)"
+        export from_branch="$(echo ${{ matrix.syncup.from }} | cut -d':' -f2)"
+        export to_repo="$(echo ${{ matrix.syncup.to }} | cut -d':' -f1)"
+        export to_branch="$(echo ${{ matrix.syncup.to }} | cut -d':' -f2)"
+        git remote add from https://${{ secrets.MY_AUTOMATIONS_TOKEN }}@github.com/${from_repo} -t ${from_branch}
+        git remote add to https://${{ secrets.MY_AUTOMATIONS_TOKEN }}@github.com/${to_repo} -t ${to_branch}
+        git pull from ${from_branch} --allow-unrelated-histories
+        git push to HEAD:${to_branch} -f
